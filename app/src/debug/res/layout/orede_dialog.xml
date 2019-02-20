@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimary"
+        android:padding="8dp"
+        android:text="Hai , Silakan Isi Form Dulu Ya "
+        android:textColor="@android:color/white"
+        android:textSize="18dp" />
+
+
+
+
+        <TextView
+            android:id="@+id/angkot_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:text="A-27"
+            android:textSize="50dp" />
+
+        <TextView
+            android:id="@+id/dialog_plate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/angkot_id"
+            android:drawableLeft="@drawable/ic_dialog_plate"
+            android:gravity="center"
+            android:padding="8dp"
+            android:drawablePadding="8dp"
+            android:text="KT 5505BP" />
+
+        <TextView
+            android:id="@+id/dialog_trayek"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/dialog_plate"
+            android:layout_margin="4dp"
+            android:layout_toRightOf="@id/angkot_id"
+            android:drawableLeft="@drawable/ic_dialog_tujuan"
+            android:gravity="center"
+            android:drawablePadding="8dp"
+            android:text="GUNUNG SARI - KLANDASAN" />
+<TextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="18dp"
+    android:text="Halte Pemberhentian"/>
+    <Spinner
+        android:id="@+id/spinner_halte"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@id/dialog_trayek"
+        android:layout_margin="8dp"
+        android:backgroundTint="@android:color/holo_blue_dark"
+        android:spinnerMode="dropdown" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="Jumlah Penumpang"/>
+        <Spinner
+            android:id="@+id/spinner_capacity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/dialog_trayek"
+            android:layout_toLeftOf="@id/spinner_halte"
+            android:backgroundTint="@android:color/holo_blue_dark"
+            android:layout_margin="8dp"
+            android:spinnerMode="dropdown" />
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_no"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@android:color/holo_blue_dark"
+            android:text="Batal"
+            android:textColor="@android:color/white" />
+
+
+        <Button
+            android:id="@+id/btn_yes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@android:color/holo_blue_dark"
+            android:text="Pesan"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+</LinearLayout>

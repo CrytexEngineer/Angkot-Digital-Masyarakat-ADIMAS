@@ -2,28 +2,48 @@
 <android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="4dp">
-<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal">
-    <TextView
-        android:id="@+id/nomorAngkot"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="A-72"
-        android:textSize="24dp"
-        android:layout_margin="8dp"
-        />
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_marginBottom="4dp"
+    app:cardCornerRadius="4dp">
 
-    <TextView
-        android:id="@+id/tujuan"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Gunung Sari-Manggar"
-        />
+        android:orientation="horizontal"
+        android:padding="8dp">
 
+        <TextView
+            android:id="@+id/nomorAngkot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:text="A-72"
+            android:textSize="24dp" />
 
+        <TextView
+            android:id="@+id/tujuan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_weight="1"
+            android:text="Gunung Sari-Manggar" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/item_plat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:text="KT5501" />
+
+        <Button
+            android:id="@+id/btn_pesan_item"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="Pesan"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/colorPrimary"
+            android:layout_weight="1" />
+
+    </LinearLayout>
 </android.support.v7.widget.CardView>

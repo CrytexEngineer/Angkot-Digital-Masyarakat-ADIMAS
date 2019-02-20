@@ -1,5 +1,6 @@
 package com.example.aqil.angkotcustomerside;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -18,12 +19,13 @@ public class AngkotAdapter extends RecyclerView.Adapter<AngkotAdapter.ViewHolder
 
     ArrayList<Angkot> listAngkot = new ArrayList<>();
 
-    public AngkotAdapter(Context context) {
+    public AngkotAdapter(Context context, Activity activity) {
         this.context = context;
+        this.activity=activity;
     }
 
     Context context;
-
+Activity activity;
 
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View itemRow = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_angkot_layout, parent, false);
@@ -51,6 +53,13 @@ public class AngkotAdapter extends RecyclerView.Adapter<AngkotAdapter.ViewHolder
             super(itemView);
             nomorAngkot = (TextView) itemView.findViewById(R.id.nomorAngkot);
             tujuan = (TextView) itemView.findViewById(R.id.tujuan);
+
+            itemView.findViewById(R.id.btn_pesan_item).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    new dialog(activity).show();
+                }
+            });
 
         }
     }

@@ -1,25 +1,35 @@
 package com.example.aqil.angkotcustomerside;
 
+import android.Manifest;
+import android.app.Dialog;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.AsyncTask;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.util.LongSparseArray;
 import android.util.Xml;
 import android.view.View;
-import android.widget.ProgressBar;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -34,12 +44,6 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.maps.GeoApiContext;
-import com.google.maps.GeocodingApi;
-import com.google.maps.RoadsApi;
-import com.google.maps.android.ui.IconGenerator;
-import com.google.maps.model.GeocodingResult;
-import com.google.maps.model.SnappedPoint;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -51,61 +55,88 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
-    private ProgressBar mProgressBar;
     private GoogleMap mMap;
     private HashMap<String, Marker> mMarkers = new HashMap<>();
     String TAG = MapsActivity.class.getSimpleName();
-    private LongSparseArray<BitmapDescriptor> mSpeedIcons = new LongSparseArray<>();
-    private IconGenerator mIconGenerator;
     List<com.google.maps.model.LatLng> mCapturedLocations;
-    List<SnappedPoint> mSnappedPoints;
-    private GeoApiContext mContext;
-    private static final int PAGINATION_OVERLAP = 5;
-    private static final int PAGE_SIZE_LIMIT = 100;
+    List<com.google.maps.model.LatLng> mCapturedLocations2;
     TextView idAngkotBar, tujuanBar;
-    RecyclerView rv ;
+    RecyclerView rv;
+    ArrayList<Angkot> angkotDatabase = new ArrayList<>();
+    ArrayList<Angkot> angkots = new ArrayList<>();
+    private static final int PERMISSIONS_REQUEST = 1;
+    ArrayList<Shelter> shelters = new ShelterList().getShelters();
+    AngkotAdapter adapter;
+    LatLng currentPoisiton;
+    private TextView tvCapacity, tvDistance, tvPlate;
+    private Button btnPesan;
+    float distance;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+
+        requetPermission();
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        mContext = new GeoApiContext().setApiKey(getString(R.string.google_maps_web_services_key));
         idAngkotBar = (TextView) findViewById(R.id.angkot_id_bar);
         tujuanBar = (TextView) findViewById(R.id.tujuan_bar);
         rv = (RecyclerView) findViewById(R.id.list_angkot_main);
-        AngkotAdapter adapter = new AngkotAdapter(this);
-        ArrayList<Angkot> angkots = new ArrayList<>();
-        angkots.add(new Angkot("A-27","Manggar-Gunung Sari",""));
-        angkots.add(new Angkot("A-27","Manggar-Gunung Sari",""));
-        angkots.add(new Angkot("A-27","Manggar-Gunung Sari",""));
-        adapter.setListAngkot(angkots);
+        tvCapacity = (TextView) findViewById(R.id.textview_capacity);
+
+        btnPesan = (Button) findViewById(R.id.button_pesan);
+        //tvDistance=(TextView)findViewById(R.id.textview_distance);
+        tvPlate = (TextView) findViewById(R.id.textview_plate);
+        tvPlate.setVisibility(View.INVISIBLE);
+        tvCapacity.setVisibility(View.INVISIBLE);
+        btnPesan.setVisibility(View.INVISIBLE);
+        adapter = new AngkotAdapter(this,this);
+
+
         rv.setLayoutManager(new LinearLayoutManager(this));
         rv.setAdapter(adapter);
+        findViewById(R.id.btn_current_location).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                requestLocationUpdates();
+                Log.d("onClick", "reqLocations");
+            }
+        });
+
+        requestLocationUpdates();
+
+
+        btnPesan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+              new dialog(MapsActivity.this).show();
+            }
+        });
+
 
     }
 
+    private void initShelters() {
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+        for (Shelter shelter : shelters) {
+            mMap.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_shelter)).
+                    title(shelter.getName()).position(new LatLng(shelter.getLat(), shelter.getLong()))).setTag("Shelter");
+
+        }
+    }
+
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        // Add a marker in Sydney and move the camera
         mMap = googleMap;
         mMap.setMaxZoomPreference(16);
         loginToFireBase();
+        initShelters();
+        startGpx();
     }
 
     private void loginToFireBase() {
@@ -156,138 +187,130 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    public void setMarker(DataSnapshot dataSnapshot) {
+    public void setMarker(final DataSnapshot dataSnapshot) {
         String key = dataSnapshot.getKey();
         HashMap<String, Object> value = (HashMap<String, Object>) dataSnapshot.getValue();
-        double lat = Double.parseDouble(value.get("latitude").toString());
+        double lat = 0;
+        if (value != null) {
+            lat = Double.parseDouble(value.get("latitude").toString());
+        }
+        assert value != null;
         double lng = Double.parseDouble(value.get("longitude").toString());
-        LatLng location = new LatLng(lat, lng);
+        final LatLng location = new LatLng(lat, lng);
+        Angkot angkot;
         if (!mMarkers.containsKey(key)) {
             mMarkers.put(key, mMap.addMarker(new MarkerOptions().title(key).position(location)));
             Log.d("TAG", "setMarker: " + "success");
+
+            angkot = new Angkot(dataSnapshot.getKey(),
+                    dataSnapshot.child("Tujuan").getValue().toString(),
+                    dataSnapshot.child("Penumpang").getValue().toString(),
+                    dataSnapshot.child("Nomor Plat").getValue().toString());
+            angkotDatabase.add(angkot);
+            angkots.add(angkot);
+
+            Log.d("TAG", dataSnapshot.toString());
         } else {
             mMarkers.get(key).setPosition(location);
+            Log.d("TAG", "setMarker: " + "alternate");
+
+            double earthRadius = 6371000; //meters
+            double dLat = Math.toRadians(mMarkers.get(key).getPosition().latitude - currentPoisiton.latitude);
+            double dLng = Math.toRadians(mMarkers.get(key).getPosition().longitude - currentPoisiton.longitude);
+            double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(Math.toRadians(mMarkers.get(key).getPosition().latitude)) * Math.cos(Math.toRadians(currentPoisiton.latitude)) *
+                            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+             distance = (float) (earthRadius * c);
+            Log.d("Distance", String.valueOf(distance));
+            Log.d("TAG", dataSnapshot.toString());
+
+            if (distance > 100) {
+                for (int i = 0; i < angkots.size(); i++) {
+                    Angkot angkot1 = angkots.get(i);
+                    if (angkot1.getNomorAngkot().equals(mMarkers.get(key).getTitle())) {
+                        angkots.remove(angkot1);
+                        Log.d("JALAN", "ANJING");
+                        btnPesan.setVisibility(View.INVISIBLE);
+                    }
+                }
+            }
+
+            if (distance < 100) {
+                btnPesan.setVisibility(View.VISIBLE);
+                Log.d("JALAN", "JALAN");
+                for (Angkot angkot2 : angkotDatabase) {
+                    if (angkot2.getNomorAngkot().equals(mMarkers.get(key).getTitle())) {
+
+                        if (!angkots.contains(angkot2)) {
+                            angkots.add(angkot2);
+                        }
+                    }
+                }
+
+
+            }
+            adapter.setListAngkot(angkots);
+            adapter.notifyDataSetChanged();
+
 
         }
+
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        for (Marker marker : mMarkers.values()) {
-            builder.include(marker.getPosition());
-        }
-     //   mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 300));
-        startGpx();
 
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+        for (
+                Marker marker : mMarkers.values())
+
+        {
+            marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_angkot));
+            marker.setTag("Angkot");
+            builder.include(marker.getPosition());
+
+
+        }
+
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener()
+
+        {
             @Override
             public boolean onMarkerClick(Marker marker) {
+
                 String id = marker.getTitle();
-                idAngkotBar.setText(id);
+                if (marker.getTag().equals("Angkot")) {
+                    idAngkotBar.setText(id);
+                    tujuanBar.setText(dataSnapshot.child("Tujuan").getValue().toString());
+                    tvCapacity.setText(dataSnapshot.child("Penumpang").getValue().toString() + "/8");
+                    tvPlate.setText(dataSnapshot.child("Nomor Plat").getValue().toString());
+                    tvCapacity.setVisibility(View.VISIBLE);
+                    tvPlate.setVisibility(View.VISIBLE);
+
+                    if(distance<100){
+                    btnPesan.setVisibility(View.VISIBLE);}
+
+                    //   tvDistance.setText(dataSnapshot.child("Tujuan").getValue().toString());
+
+                }
+
+                if (marker.getTag().equals("Shelter")) {
+                    idAngkotBar.setText(marker.getTitle());
+                    for (Shelter shelter : shelters) {
+                        if (shelter.Name.equals(marker.getTitle())) {
+                            tujuanBar.setText(shelter.Lokasi);
+                            tvCapacity.setVisibility(View.INVISIBLE);
+                            tvPlate.setVisibility(View.INVISIBLE);
+                            btnPesan.setVisibility(View.INVISIBLE);
+
+                        }
+                    }
+
+                }
                 return true;
             }
         });
 
     }
 
-
-    AsyncTask<Void, Void, List<SnappedPoint>> mTaskSnapToRoads =
-            new AsyncTask<Void, Void, List<SnappedPoint>>() {
-                @Override
-                protected void onPreExecute() {
-                    mProgressBar.setVisibility(View.VISIBLE);
-                    mProgressBar.setIndeterminate(true);
-                }
-
-                @Override
-                protected List<SnappedPoint> doInBackground(Void... params) {
-                    try {
-                        return snapToRoads(mContext);
-                    } catch (final Exception ex) {
-                        toastException(ex);
-                        ex.printStackTrace();
-                        return null;
-                    }
-                }
-
-                @Override
-                protected void onPostExecute(List<SnappedPoint> snappedPoints) {
-                    mSnappedPoints = snappedPoints;
-                    mProgressBar.setVisibility(View.INVISIBLE);
-
-
-                    com.google.android.gms.maps.model.LatLng[] mapPoints =
-                            new com.google.android.gms.maps.model.LatLng[mSnappedPoints.size()];
-                    int i = 0;
-                    LatLngBounds.Builder bounds = new LatLngBounds.Builder();
-                    for (SnappedPoint point : mSnappedPoints) {
-                        mapPoints[i] = new com.google.android.gms.maps.model.LatLng(point.location.lat,
-                                point.location.lng);
-                        bounds.include(mapPoints[i]);
-                        i += 1;
-                    }
-
-                    mMap.addPolyline(new PolylineOptions().add(mapPoints).color(Color.BLUE));
-                 //   mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 0));
-                }
-            };
-
-
-    private List<SnappedPoint> snapToRoads(GeoApiContext context) throws Exception {
-        List<SnappedPoint> snappedPoints = new ArrayList<>();
-
-        int offset = 0;
-        while (offset < mCapturedLocations.size()) {
-            // Calculate which points to include in this request. We can't exceed the APIs
-            // maximum and we want to ensure some overlap so the API can infer a good location for
-            // the first few points in each request.
-            if (offset > 0) {
-                offset -= PAGINATION_OVERLAP;   // Rewind to include some previous points
-            }
-            int lowerBound = offset;
-            int upperBound = Math.min(offset + PAGE_SIZE_LIMIT, mCapturedLocations.size());
-
-            // Grab the data we need for this page.
-            com.google.maps.model.LatLng[] page = mCapturedLocations
-                    .subList(lowerBound, upperBound)
-                    .toArray(new com.google.maps.model.LatLng[upperBound - lowerBound]);
-
-            // Perform the request. Because we have interpolate=true, we will get extra data points
-            // between our originally requested path. To ensure we can concatenate these points, we
-            // only start adding once we've hit the first new point (i.e. skip the overlap).
-            SnappedPoint[] points = RoadsApi.snapToRoads(context, true, page).await();
-            boolean passedOverlap = false;
-            for (SnappedPoint point : points) {
-                if (offset == 0 || point.originalIndex >= PAGINATION_OVERLAP) {
-                    passedOverlap = true;
-                }
-                if (passedOverlap) {
-                    snappedPoints.add(point);
-                }
-            }
-
-            offset = upperBound;
-        }
-
-        return snappedPoints;
-    }
-
-    private GeocodingResult geocodeSnappedPoint(GeoApiContext context, SnappedPoint point) throws Exception {
-        GeocodingResult[] results = GeocodingApi.newRequest(context)
-                .place(point.placeId)
-                .await();
-
-        if (results.length > 0) {
-            return results[0];
-        }
-        return null;
-    }
-
-    private void toastException(final Exception ex) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        });
-    }
 
     private List<com.google.maps.model.LatLng> loadGpxData(XmlPullParser parser, InputStream gpxIn)
             throws XmlPullParserException, IOException {
@@ -318,26 +341,97 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void startGpx() {
         try {
             mCapturedLocations = loadGpxData(Xml.newPullParser(), getResources().openRawResource(R.raw.gpx_data));
-
+            mCapturedLocations2 = loadGpxData(Xml.newPullParser(), getResources().openRawResource(R.raw.gpx_lely));
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
             PolylineOptions polyline = new PolylineOptions();
+            PolylineOptions polyline2 =new PolylineOptions();
 
             for (com.google.maps.model.LatLng ll : mCapturedLocations) {
                 com.google.android.gms.maps.model.LatLng mapPoint =
                         new com.google.android.gms.maps.model.LatLng(ll.lat, ll.lng);
                 builder.include(mapPoint);
                 polyline.add(mapPoint);
-                Log.d(TAG, "startGpx: " );
+                Log.d(TAG, "startGpx: ");
             }
 
-            mMap.addPolyline(polyline.color(Color.RED));
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 0));
+            mMap.addPolyline(polyline.color(Color.BLUE));
+
+
+            for (com.google.maps.model.LatLng ll : mCapturedLocations2) {
+                com.google.android.gms.maps.model.LatLng mapPoint =
+                        new com.google.android.gms.maps.model.LatLng(ll.lat, ll.lng);
+                builder.include(mapPoint);
+                polyline2.add(mapPoint);
+                Log.d(TAG, "startGpx: ");
+            }
+
+            mMap.addPolyline(polyline2.color(Color.GREEN));
+
         } catch (XmlPullParserException | IOException e) {
             e.printStackTrace();
-            toastException(e);
+
         }
     }
 
+    private void requestLocationUpdates() {
 
+        LocationRequest request = new LocationRequest();
+        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
+        int permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION);
+        if (permission == PackageManager.PERMISSION_GRANTED)
+            client.requestLocationUpdates(request, new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    Location location = locationResult.getLastLocation();
+                    if (location != null) {
+                        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                        currentPoisiton = new LatLng(location.getLatitude(), location.getLongitude());
+                        builder.include(currentPoisiton);
+                        mMap.addMarker(new MarkerOptions().position(currentPoisiton).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_mylocation)));
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 0));
+                        Log.d("onLocationResult", "Success");
+                    }
+                }
+            }, null);
+    }
+
+
+    public void requetPermission() {
+        LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            Toast.makeText(this, "Please enable location services", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+
+        int permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST);
+        }
+
+    }
+
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[]
+            grantResults) {
+        if (requestCode == PERMISSIONS_REQUEST && grantResults.length == 1
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+        } else {
+            finish();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+        android.os.Process.killProcess(android.os.Process.myPid());
+    }
 }
 
